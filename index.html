@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Recognition App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+            background-color: #f0f2f5;
+        }
+    
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    
+        h1 {
+            font-size: 28px;
+            color: #333;
+        }
+    
+        form {
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+    
+        input[type="text"] {
+            padding: 10px;
+            width: 60%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    
+        button {
+            padding: 10px 18px;
+            background-color: #0fc9ad;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+    
+        button:hover {
+            background-color: #3e6792;
+        }
+    
+        #peopleList {
+            text-align: left;
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #e9f5ff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+    
+        #peopleList h3 {
+            margin-top: 0;
+            color: #0daea4;
+        }
+    
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+    
+        li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background-color: #ffffff;
+            border: 1px solid #dce3e8;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            font-weight: 500;
+            color: #333;
+        }
+    </style>
+    
+</head>
+<body>
+    <div class="container">
+        <h1><b><i>Face Recognition System</i></b></h1><hr>
+
+        <!-- Collect Faces Form -->
+       <form onsubmit="event.preventDefault(); startCollection()">
+    <input type="text" id="personName" placeholder="Enter Name" required>
+    <button type="submit">Collect Faces</button>
+</form>
+
+        <!-- Train Model Button -->
+         <label><h5>Once the collection of faces is complete, you must train the system before proceeding to the next process !</h5></label>
+        <form method="POST" action="/train_model">
+            <button onclick="startTraining()">Train Model</button>
+
+        </form>
+
+        <form method="GET" action="/start_detection">
+            <button type="submit">Start Detection</button>
+        </form>
+        
+        <!-- Start Recognition Button -->
+        <form method="POST" action="/recognize">
+            <button type="submit" onclick="recognizef()">Start Live Recognition</button>
+        </form>
+
+        <!-- List People Button -->
+        <form onsubmit="event.preventDefault(); listPeople();">
+            <button type="button" onclick="listPeople()" id="toggleBtn" class="show-state">List Registered People</button>
+        </form>
+
+        <!-- People List Section (Hidden initially) -->
+        <div id="peopleList" style="display: none;">
+            <h3>Registered People:</h3>
+            <ul id="peopleUl"></ul>
+        </div>
+
+        <!-- Delete Person Form -->
+       <!-- Change to prevent default form submission -->
+
+       <form onsubmit="event.preventDefault(); confirmDelete()">
+        <input type="text" id="personToDelete" placeholder="Name to Delete" required>
+        <button type="submit">Delete Person</button>
+        </form>
+    </div>
+
+    <script>
+
+function startCollection() {
+    const name = document.getElementById('personName').value.trim();
+    if (!name) {
+        alert("Please enter a name");
+        return;
+    }
+
+    // First alert - collection started
+    alert(`🚀 Starting face collection for ${name}...`);
+
+    fetch('/collect_faces', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `person_name=${encodeURIComponent(name)}`
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Server error');
+        return response.json();
+    })
+    .then(data => {
+        // Second alert - collection completed
+        alert("The camera will turn on and capture 30 frames. Please show different facial expressions for better accuracy.")
+    })
+    .catch(error => {
+        // Error alert
+        alert(`❌ Error: ${error.message}`);
+    });
+}
+        function listPeople() {
+            fetch('/list_faces')
+                .then(response => response.json())
+                .then(data => {
+                    const peopleListDiv = document.getElementById('peopleList');
+                    const ul = document.getElementById('peopleUl');
+                    ul.innerHTML = '';
+
+                    if (data.people.length === 0) {
+                        ul.innerHTML = '<li>No faces registered.</li>';
+                    } else {
+                        data.people.forEach(person => {
+                            const li = document.createElement('li');
+                            li.textContent = person;
+                            ul.appendChild(li);
+                        });
+                    }
+
+                    peopleListDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error loading list:', error);
+                    alert('Error loading people list');
+                });
+        }
+        function listPeople() {
+    const peopleListDiv = document.getElementById('peopleList');
+    const ul = document.getElementById('peopleUl');
+
+    if (peopleListDiv.style.display === 'block') {
+        peopleListDiv.style.display = 'none';
+        return;
+    }
+
+    fetch('/list_faces')
+        .then(response => response.json())
+        .then(data => {
+            ul.innerHTML = '';
+
+            if (data.people.length === 0) {
+                ul.innerHTML = '<li>No faces registered.</li>';
+            } else {
+                data.people.forEach(person => {
+                    const li = document.createElement('li');
+                    li.textContent = "🧑 " + person;
+                    ul.appendChild(li);
+                });
+            }
+
+            peopleListDiv.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading list:', error);
+            alert('Error loading people list');
+        });
+}
+document.getElementById('toggleBtn').addEventListener('click', function() {
+    const btn = this;
+    
+    if (btn.classList.contains('show-state')) {
+        btn.classList.remove('show-state');
+        btn.classList.add('hide-state');
+        btn.textContent = 'Hide Registered People List';
+        // Show content
+    } else {
+        btn.classList.remove('hide-state');
+        btn.classList.add('show-state');
+        btn.textContent = 'List Registered People';
+        // Hide content
+    }
+});
+
+function startTraining() {
+    // Show loading state
+    const trainBtn = document.querySelector('button[onclick="startTraining()"]');
+    trainBtn.disabled = true;
+    trainBtn.innerHTML = '<span class="spinner">Training...</span>';
+    
+    fetch('/train_model', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "training_started") {
+                checkTrainingComplete();
+            }
+        })
+        .catch(error => {
+            alert("❌ Failed to start training.");
+            trainBtn.disabled = false;
+            trainBtn.textContent = 'Train Model';
+        });
+}
+
+function checkTrainingComplete() {
+    const trainBtn = document.querySelector('button[onclick="startTraining()"]');
+    const interval = setInterval(() => {
+        fetch('/train_status')
+            .then(res => res.json())
+            .then(data => {
+                if (data.done) {
+                    clearInterval(interval);
+                    trainBtn.disabled = false;
+                    trainBtn.textContent = 'Train Model';
+                    
+                    // Get the actual number from the console output (alternative approach)
+                    fetch('/get_training_stats')
+                        .then(res => res.json())
+                        .then(stats => {
+                            alert(`✅ Training completed on ${stats.num_images} images!`);
+                        });
+                }
+            });
+    }, 2000);
+}
+
+function confirmDelete() {
+    const name = document.getElementById('personToDelete').value;
+    if (!name) {
+        alert("Please enter a name to delete");
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete ${name}? This cannot be undone.`)) {
+        fetch('/delete_face', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `person_name=${encodeURIComponent(name)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.message}`);
+                listPeople();
+                document.getElementById('personToDelete').value = '';
+            } else {
+                alert(`❌ ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Error deleting person');
+        });
+    }
+}
+function recognizef(){
+    alert("Click a key 'Q' to exit camera") 
+    alert(" The Camera will on new window please check light and camera angles")
+    
+}
+    </script>
+</body>
+</html>
